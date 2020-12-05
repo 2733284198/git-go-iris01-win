@@ -5,7 +5,13 @@ import (
 	"github.com/kataras/iris/v12"
 	"github.com/kataras/iris/v12/middleware/logger"
 	"github.com/kataras/iris/v12/middleware/recover"
+	"github.com/kataras/iris/v12/sessions"
 	//"github.com/kataras/iris/v12/core/router"
+)
+
+var (
+	cookieNameForSessionID = "mycookiesessionnameid"
+	sess                   = sessions.New(sessions.Config{Cookie: cookieNameForSessionID})
 )
 
 func main() {
@@ -14,8 +20,40 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 
+	// session
+	//sess.Start()
+	//sess.Set("authenticated", true)
+
+	// 错误处理
+	app.OnErrorCode(iris.StatusNotFound, notFound)
+	app.OnErrorCode(iris.StatusInternalServerError, internalServerError)
+
 	//app.RegisterView(iris.HTML("./templates", ".html").Reload(true))
 	app.RegisterView(iris.HTML("./templates", ".html").Reload(true))
+
+	app.PartyFunc("/user", func(child iris.Party) {
+		child.Get("/login", func(ctx iris.Context) {
+			ctx.WriteString("start session")
+
+			session := sess.Start(ctx)
+			// 在里执行验证
+			// ...
+			//把验证状态保存为true
+			//session.Set("authenticated", true)
+			session.Set("authenticated", "manlan")
+
+		})
+
+		child.Get("/logout", func(ctx iris.Context) {
+			ctx.WriteString("start logout")
+			session := sess.Start(ctx)
+
+			//ctx.WriteString("start get")
+
+			fmt.Println(" \n session:authenticated==> ", session.Get("authenticated"))
+
+		})
+	})
 
 	app.Get("/all", before, mainHandler, after)
 
@@ -71,7 +109,7 @@ func main() {
 		app.Get("/{username:string}", profileByUsername)
 
 		child.Get("/view1", func(ctx iris.Context) {
-
+			ctx.ViewData("message", "Hello world!")
 			ctx.View("views/index.html")
 		})
 
@@ -92,6 +130,16 @@ func main() {
 
 	app.Run(iris.Addr(":8080"))
 	//_ = app.Listen(":880")
+}
+
+//当出现错误的时候，再试一次
+func internalServerError(ctx iris.Context) {
+	ctx.WriteString("Oups something went wrong, try again")
+}
+
+func notFound(ctx iris.Context) {
+	// 当http.status=400 时向客户端渲染模板$views_dir/errors/404.html
+	ctx.View("errors/404.html")
 }
 
 func profileByUsername(ctx iris.Context) {
