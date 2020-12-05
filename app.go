@@ -14,6 +14,9 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 
+	//app.RegisterView(iris.HTML("./templates", ".html").Reload(true))
+	app.RegisterView(iris.HTML("./templates", ".html").Reload(true))
+
 	app.Get("/all", before, mainHandler, after)
 
 	app.Get("/hello/:id", func(context iris.Context) {
@@ -66,6 +69,11 @@ func main() {
 
 	app.PartyFunc("/test", func(child iris.Party) {
 		app.Get("/{username:string}", profileByUsername)
+
+		child.Get("/view1", func(ctx iris.Context) {
+
+			ctx.View("views/index.html")
+		})
 
 		child.Get("/file", func(ctx iris.Context) {
 			file := "./files/1.txt"
